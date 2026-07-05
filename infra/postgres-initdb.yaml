@@ -1,0 +1,13 @@
+# One database per demo app. Runs only on first boot (empty data dir).
+# To add an app later without recreating Postgres:
+#   kubectl exec -n demos postgres-0 -- createdb -U postgres <name>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb
+  namespace: demos
+data:
+  01-databases.sql: |
+    CREATE DATABASE foundry;
+    -- add one line per additional demo app:
+    -- CREATE DATABASE <name>;

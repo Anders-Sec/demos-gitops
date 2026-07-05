@@ -1,0 +1,37 @@
+# Per-project values for the Foundry demo. Rendered by the demos ApplicationSet
+# over charts/webapp. No Vault — plain env, demo creds.
+fullnameOverride: foundry
+
+image:
+  registry: ghcr.io/anders-sec
+
+backend:
+  image:
+    repository: foundry-backend
+    tag: "v1"
+  rootPath: /api
+  env:
+    DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres.demos.svc.cluster.local:5432/foundry
+    SECRET_KEY: demo-secret-key
+    APP_ENV: development
+    AUTH_ENABLED: "false"
+    SEED_DEMO_DATA: "true"
+    CORS_ORIGINS: "https://foundry.itpluto.dev"
+
+frontend:
+  image:
+    repository: foundry-frontend
+    tag: "v1"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: foundry.itpluto.dev
+  apiPath: /api
+  tls:
+    enabled: true
+    secretName: itpluto-wildcard-tls
+
+# No Vault/ESO for demos — DATABASE_URL/SECRET_KEY come from backend.env above.
+externalSecrets:
+  enabled: false

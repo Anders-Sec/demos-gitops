@@ -1,0 +1,16 @@
+# One wildcard cert for every demo subdomain. Issued via cert-manager DNS-01
+# (the existing letsencrypt-prod ClusterIssuer + Cloudflare token, which must
+# have Zone:DNS:Edit on the itpluto.dev zone). All demo ingresses reference the
+# resulting secret, so new demos need zero cert work.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: itpluto-wildcard
+  namespace: demos
+spec:
+  secretName: itpluto-wildcard-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.itpluto.dev"

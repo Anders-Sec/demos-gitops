@@ -1,0 +1,137 @@
+# Default values for the `webapp` chart.
+# These are generic, stack-level defaults. Per-project specifics (image repos,
+# hostname, Vault references) are supplied by each project's gitops values.
+
+# -- Override the chart name / full release name.
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # -- Container registry that hosts both images (e.g. ghcr.io/<github-org>).
+  registry: ghcr.io/your-org
+  pullPolicy: IfNotPresent
+  # -- Names of imagePullSecrets (only needed for a private registry).
+  pullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# -- Pod-level security context applied to both workloads.
+podSecurityContext:
+  runAsNonRoot: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Backend (FastAPI)
+# ─────────────────────────────────────────────────────────────────────────────
+backend:
+  image:
+    repository: foundry-backend
+    # -- Image tag. Empty -> chart appVersion. Set per-project (git SHA) in gitops.
+    tag: ""
+  replicaCount: 1
+  containerPort: 8000
+  # -- Served behind ingress at this prefix; passed to uvicorn --root-path so
+  #    FastAPI emits correct redirect/openapi URLs. Must match ingress.apiPath.
+  rootPath: /api
+  env:
+    # APP_ENV=development keeps the simulated integrations (XDR/Scout/DevOps)
+    # active for the demo. For a real deployment with live creds, set production.
+    APP_ENV: development
+    AUTH_ENABLED: "false"
+    # Set to the public ingress URL (https://<host>). Same-origin in the default
+    # routing model, so this is belt-and-suspenders.
+    CORS_ORIGINS: ""
+    SEED_DEMO_DATA: "true"
+  # -- Extra raw env entries (list of {name,value} or {name,valueFrom}).
+  extraEnv: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  # Probes hit the pod directly (not via ingress), so they use the root path.
+  startupProbe:
+    httpGet: { path: /health, port: 8000 }
+    periodSeconds: 5
+    failureThreshold: 30   # allow time for migrations + seed on first boot
+  livenessProbe:
+    httpGet: { path: /health, port: 8000 }
+    periodSeconds: 15
+  readinessProbe:
+    httpGet: { path: /health, port: 8000 }
+    periodSeconds: 10
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Frontend (static SPA served by nginx)
+# ─────────────────────────────────────────────────────────────────────────────
+frontend:
+  image:
+    repository: foundry-frontend
+    tag: ""
+  replicaCount: 1
+  containerPort: 80
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 250m
+      memory: 128Mi
+  livenessProbe:
+    httpGet: { path: /, port: 80 }
+    periodSeconds: 15
+  readinessProbe:
+    httpGet: { path: /, port: 80 }
+    periodSeconds: 10
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Ingress (ingress-nginx). One host: `/` -> frontend, `<apiPath>` -> backend
+# with the prefix stripped before forwarding.
+# ─────────────────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: nginx
+  host: foundry.example.com
+  apiPath: /api
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# External Secrets Operator -> syncs Vault into a native k8s Secret that the
+# backend consumes via envFrom (kubelet blocks pod start until it exists).
+# ─────────────────────────────────────────────────────────────────────────────
+externalSecrets:
+  enabled: true
+  refreshInterval: 1h
+  # -- Reference to the ESO SecretStore/ClusterSecretStore wired to your Vault.
+  secretStore:
+    name: vault-backend
+    kind: ClusterSecretStore
+  # -- Name of the k8s Secret ESO creates (defaults to <fullname>-secrets).
+  targetSecretName: ""
+  # -- Keys pulled from Vault into the target Secret. `remoteRef.key` is the
+  #    Vault path; `property` is the field within that path.
+  data:
+    - secretKey: DATABASE_URL
+      remoteRef:
+        key: secret/data/foundry
+        property: database-url
+    - secretKey: SECRET_KEY
+      remoteRef:
+        key: secret/data/foundry
+        property: secret-key
+  # -- Optional ESO target template to compose values (e.g. assemble DATABASE_URL
+  #    from username/password/host parts). Leave empty to pass keys through.
+  template: {}

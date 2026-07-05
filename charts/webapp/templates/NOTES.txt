@@ -1,0 +1,19 @@
+{{ include "webapp.fullname" . }} deployed.
+
+Frontend:  {{ include "webapp.image" (list . .Values.frontend.image) }}
+Backend:   {{ include "webapp.image" (list . .Values.backend.image) }}
+
+{{- if .Values.ingress.enabled }}
+
+URL:       http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}
+API:       http{{ if .Values.ingress.tls.enabled }}s{{ end }}://{{ .Values.ingress.host }}{{ .Values.ingress.apiPath }}
+{{- end }}
+
+{{- if .Values.externalSecrets.enabled }}
+
+Secrets are synced from Vault via External Secrets Operator into:
+  Secret/{{ include "webapp.secretName" . }}  (store: {{ .Values.externalSecrets.secretStore.kind }}/{{ .Values.externalSecrets.secretStore.name }})
+
+Verify with:
+  kubectl -n {{ .Release.Namespace }} get externalsecret {{ include "webapp.fullname" . }}-secrets
+{{- end }}

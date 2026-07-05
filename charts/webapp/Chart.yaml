@@ -1,0 +1,19 @@
+apiVersion: v2
+name: webapp
+description: >-
+  Reusable chart for the standard stack — a static SPA frontend (nginx) plus a
+  FastAPI backend, fronted by ingress-nginx, with secrets delivered by the
+  External Secrets Operator from HashiCorp Vault. Designed to be shared across
+  multiple same-stack projects via per-project values.
+type: application
+# Chart version — bump on chart template changes. Published to GHCR as an OCI chart.
+version: 0.1.0
+# Default application version; per-project image tags are supplied via values.
+appVersion: "1.0.0"
+keywords:
+  - fastapi
+  - spa
+  - vault
+  - external-secrets
+maintainers:
+  - name: Platform

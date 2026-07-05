@@ -1,0 +1,34 @@
+# One ArgoCD Application per demo, generated from the list below. To add a demo:
+# build its images, add apps/<name>.yaml, and add one line here.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: demos
+  namespace: argocd
+spec:
+  goTemplate: true
+  generators:
+    - list:
+        elements:
+          - name: foundry
+  template:
+    metadata:
+      name: "{{.name}}"
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/Anders-Sec/demos-gitops.git
+        targetRevision: main
+        path: charts/webapp
+        helm:
+          valueFiles:
+            - "../../apps/{{.name}}.yaml"
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: demos
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=false

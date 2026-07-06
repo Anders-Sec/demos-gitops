@@ -11,7 +11,10 @@ image:
   registry: ghcr.io/your-org
   pullPolicy: IfNotPresent
   # -- Names of imagePullSecrets (only needed for a private registry).
-  pullSecrets: []
+  # The demos' GHCR packages are private, so pull via the `ghcr-pull` secret
+  # (created once in the `demos` namespace from the local docker config).
+  pullSecrets:
+    - name: ghcr-pull
 
 serviceAccount:
   create: true

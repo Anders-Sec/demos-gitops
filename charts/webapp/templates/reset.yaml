@@ -1,0 +1,123 @@
+{{- if .Values.reset.enabled }}
+# Daily demo reset. A CronJob runs the backend image on a schedule and rebuilds
+# the app's data from scratch: wipe the schema (generic wipe.py below), run
+# migrations, then the app's own seed. Reuses the backend image tag + env, so
+# the reseed always matches the deployed app. See values.yaml `reset`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webapp.fullname" . }}-reset
+  labels:
+    {{- include "webapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: reset
+data:
+  # Generic wipe: kick other connections, then drop + recreate the public schema
+  # (clears every table incl. alembic_version). The CronJob migrates + seeds after.
+  wipe.py: |
+    import asyncio
+    import os
+    import sys
+
+    import asyncpg
+
+
+    async def main() -> None:
+        dsn = os.environ["DATABASE_URL"].replace("+asyncpg", "")
+        conn = None
+        for _ in range(15):
+            try:
+                conn = await asyncpg.connect(dsn)
+                break
+            except Exception as exc:  # noqa: BLE001 — retry any connection error
+                print(f"[reset] db not ready ({exc}); retrying...", flush=True)
+                await asyncio.sleep(2)
+        if conn is None:
+            sys.exit("[reset] database unreachable")
+        await conn.execute(
+            "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
+            "WHERE datname = current_database() AND pid <> pg_backend_pid();"
+        )
+        await conn.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+        await conn.close()
+        print("[reset] schema recreated", flush=True)
+
+
+    asyncio.run(main())
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "webapp.fullname" . }}-reset
+  labels:
+    {{- include "webapp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: reset
+spec:
+  schedule: {{ .Values.reset.schedule | quote }}
+  {{- with .Values.reset.timeZone }}
+  timeZone: {{ . | quote }}
+  {{- end }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "webapp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: reset
+        spec:
+          restartPolicy: Never
+          serviceAccountName: {{ include "webapp.serviceAccountName" . }}
+          {{- with .Values.image.pullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.podSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: reset
+              image: {{ include "webapp.image" (list . .Values.backend.image) }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  echo "[reset] wiping database..."
+                  python /reset/wipe.py
+                  echo "[reset] running migrations..."
+                  alembic upgrade head
+                  echo "[reset] seeding demo data..."
+                  {{ .Values.reset.seedCommand }}
+                  echo "[reset] complete."
+              env:
+                - name: ROOT_PATH
+                  value: {{ .Values.backend.rootPath | quote }}
+                {{- range $k, $v := .Values.backend.env }}
+                - name: {{ $k }}
+                  value: {{ $v | quote }}
+                {{- end }}
+                {{- with .Values.backend.extraEnv }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+              {{- if .Values.externalSecrets.enabled }}
+              envFrom:
+                - secretRef:
+                    name: {{ include "webapp.secretName" . }}
+              {{- end }}
+              volumeMounts:
+                - name: reset-script
+                  mountPath: /reset
+              resources:
+                {{- toYaml .Values.backend.resources | nindent 16 }}
+          volumes:
+            - name: reset-script
+              configMap:
+                name: {{ include "webapp.fullname" . }}-reset
+{{- end }}

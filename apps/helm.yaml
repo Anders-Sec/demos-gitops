@@ -38,3 +38,9 @@ ingress:
 # No Vault/ESO for demos — DATABASE_URL/SECRET_KEY come from backend.env above.
 externalSecrets:
   enabled: false
+
+# Daily wipe + reseed so the public demo starts fresh each day.
+reset:
+  enabled: true
+  schedule: "0 9 * * *"   # 09:00 UTC (~03:00 America/Denver)
+  seedCommand: "python seed.py && python seed_demo.py"

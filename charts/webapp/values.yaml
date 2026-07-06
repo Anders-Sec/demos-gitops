@@ -138,3 +138,22 @@ externalSecrets:
   # -- Optional ESO target template to compose values (e.g. assemble DATABASE_URL
   #    from username/password/host parts). Leave empty to pass keys through.
   template: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Daily demo reset. A CronJob runs the backend image on a schedule and rebuilds
+# the app's data from scratch so a public demo starts fresh each day:
+#   wipe schema  ->  alembic upgrade head  ->  seedCommand
+# Off by default. Enable per-app and set the app's own seed command (the seed
+# is idempotent, so a plain restart won't reset renamed/edited data — a wipe is
+# required). Uses the backend image tag + env, so the reseed matches the app.
+# ─────────────────────────────────────────────────────────────────────────────
+reset:
+  enabled: false
+  # -- Cron schedule. UTC unless timeZone is set.
+  schedule: "0 9 * * *"
+  # -- Optional IANA timezone, e.g. "America/Denver" (needs Kubernetes >= 1.27).
+  timeZone: ""
+  # -- Shell command run after wipe + migrate to reseed. App-specific, e.g.
+  #    foundry: python -c "import asyncio; from app.seed import seed_demo_data; asyncio.run(seed_demo_data())"
+  #    helm:    python seed.py && python seed_demo.py
+  seedCommand: ""

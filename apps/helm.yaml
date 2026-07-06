@@ -8,7 +8,7 @@ image:
 backend:
   image:
     repository: helm-backend
-    tag: "v2"
+    tag: "v3"
   # Ingress strips /api/v1 before forwarding; ROOT_PATH keeps FastAPI docs/redirects correct.
   rootPath: /api/v1
   env:
@@ -22,7 +22,7 @@ backend:
 frontend:
   image:
     repository: helm-frontend
-    tag: "v2"
+    tag: "v3"
 
 ingress:
   enabled: true

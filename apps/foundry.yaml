@@ -8,7 +8,7 @@ image:
 backend:
   image:
     repository: foundry-backend
-    tag: "v1"
+    tag: "v2"
   rootPath: /api
   env:
     DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres.demos.svc.cluster.local:5432/foundry
@@ -21,7 +21,7 @@ backend:
 frontend:
   image:
     repository: foundry-frontend
-    tag: "v1"
+    tag: "v2"
 
 ingress:
   enabled: true

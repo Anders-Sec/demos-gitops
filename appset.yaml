@@ -11,6 +11,7 @@ spec:
     - list:
         elements:
           - name: foundry
+          - name: helm
   template:
     metadata:
       name: "{{.name}}"

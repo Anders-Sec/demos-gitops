@@ -1,0 +1,40 @@
+# Per-project values for the Helm demo. Rendered by the demos ApplicationSet
+# over charts/webapp. No Vault — plain env, demo creds, DEMO_MODE simulators.
+fullnameOverride: helm
+
+image:
+  registry: ghcr.io/anders-sec
+
+backend:
+  image:
+    repository: helm-backend
+    tag: "v1"
+  # Ingress strips /api/v1 before forwarding; ROOT_PATH keeps FastAPI docs/redirects correct.
+  rootPath: /api/v1
+  env:
+    DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres.demos.svc.cluster.local:5432/helm
+    SECRET_KEY: demo-secret-key
+    ENVIRONMENT: development
+    DEMO_MODE: "true"
+    CORS_ORIGINS: "https://helm.itpluto.dev"
+    APP_BASE_URL: "https://helm.itpluto.dev"
+
+frontend:
+  image:
+    repository: helm-frontend
+    tag: "v1"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: helm.itpluto.dev
+  # The app owns the /api/v1 prefix externally; the ingress strips it (rewrite)
+  # so the backend — whose routers mount at root — sees /programs, /auth, etc.
+  apiPath: /api/v1
+  tls:
+    enabled: true
+    secretName: itpluto-wildcard-tls
+
+# No Vault/ESO for demos — DATABASE_URL/SECRET_KEY come from backend.env above.
+externalSecrets:
+  enabled: false

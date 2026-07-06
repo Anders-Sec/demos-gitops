@@ -9,5 +9,6 @@ metadata:
 data:
   01-databases.sql: |
     CREATE DATABASE foundry;
+    CREATE DATABASE helm;
     -- add one line per additional demo app:
     -- CREATE DATABASE <name>;

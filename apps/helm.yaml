@@ -1,11 +1,16 @@
 # Per-project values for the Helm demo. Rendered by the demos ApplicationSet
 # over charts/webapp. No Vault — plain env, demo creds, DEMO_MODE simulators.
+#
+# SUSPENDED (archived): scaled to 0 and daily reset disabled to free the cluster
+# for the CTF platform. Fully reversible — restore backend/frontend replicaCount
+# to 1 and reset.enabled to true. The images and DB data are untouched.
 fullnameOverride: helm
 
 image:
   registry: ghcr.io/anders-sec
 
 backend:
+  replicaCount: 0
   image:
     repository: helm-backend
     tag: "v3"
@@ -20,6 +25,7 @@ backend:
     APP_BASE_URL: "https://helm.itpluto.dev"
 
 frontend:
+  replicaCount: 0
   image:
     repository: helm-frontend
     tag: "v3"
@@ -40,7 +46,8 @@ externalSecrets:
   enabled: false
 
 # Daily wipe + reseed so the public demo starts fresh each day.
+# Disabled while suspended (no point resetting a scaled-down app).
 reset:
-  enabled: true
+  enabled: false
   schedule: "0 9 * * *"   # 09:00 UTC (~03:00 America/Denver)
   seedCommand: "python seed.py && python seed_demo.py"

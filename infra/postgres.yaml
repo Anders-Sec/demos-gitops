@@ -20,7 +20,9 @@ metadata:
   namespace: demos
 spec:
   serviceName: postgres
-  replicas: 1
+  # Suspended with the demos (scaled to 0) to free the cluster for the CTF
+  # platform. The PVC (demo data) is retained. Restore to 1 to bring it back.
+  replicas: 0
   selector:
     matchLabels:
       app: postgres

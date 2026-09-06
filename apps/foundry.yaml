@@ -1,11 +1,16 @@
 # Per-project values for the Foundry demo. Rendered by the demos ApplicationSet
 # over charts/webapp. No Vault — plain env, demo creds.
+#
+# SUSPENDED (archived): scaled to 0 and daily reset disabled to free the cluster
+# for the CTF platform. Fully reversible — restore backend/frontend replicaCount
+# to 1 and reset.enabled to true. The images and DB data are untouched.
 fullnameOverride: foundry
 
 image:
   registry: ghcr.io/anders-sec
 
 backend:
+  replicaCount: 0
   image:
     repository: foundry-backend
     tag: "v3"
@@ -19,6 +24,7 @@ backend:
     CORS_ORIGINS: "https://foundry.itpluto.dev"
 
 frontend:
+  replicaCount: 0
   image:
     repository: foundry-frontend
     tag: "v2"
@@ -37,7 +43,8 @@ externalSecrets:
   enabled: false
 
 # Daily wipe + reseed so the public demo starts fresh each day.
+# Disabled while suspended (no point resetting a scaled-down app).
 reset:
-  enabled: true
+  enabled: false
   schedule: "0 9 * * *"   # 09:00 UTC (~03:00 America/Denver)
   seedCommand: 'python -c "import asyncio; from app.seed import seed_demo_data; asyncio.run(seed_demo_data())"'
